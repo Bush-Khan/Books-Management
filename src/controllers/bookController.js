@@ -2,6 +2,37 @@ const bookModel = require("../model/bookModel")
 const userModel = require("../model/userModel")
 const reviewModel = require("../model/reviewModel")
 const mongoose = require('mongoose')
+const aws = require("aws-sdk")
+
+aws.config.update({
+  accessKeyId: "AKIAY3L35MCRVFM24Q7U",
+  secretAccessKey: "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",
+  region: "ap-south-1"
+})
+
+let uploadFile = async (file) => {
+  return new Promise(function (resolve, reject) {
+    // this function will upload file to aws and return the link
+    let s3 = new aws.S3({ apiVersion: '2006-03-01' }); // we will be using the s3 service of aws
+
+    var uploadParams = {
+      ACL: "public-read",
+      Bucket: "classroom-training-bucket",  //HERE
+      Key: "abc/" + file.originalname, //HERE 
+      Body: file.buffer
+    }
+
+
+    s3.upload(uploadParams, function (err, data) {
+      if (err) {
+        return reject({ "error": err })
+      }
+      console.log(data)
+      console.log("file uploaded succesfully")
+      return resolve(data.Location)
+    })
+  })
+}
 
 const isValid = function (value) {
   if (!value || value === "undefined" || value === null) return false;
@@ -27,7 +58,6 @@ const isValidUserId = function (ObjectId) {
   return mongoose.Types.ObjectId.isValid(ObjectId)
 }
 
-//1.
 //==========================create Book==================================
 const createBook = async function (req, res) {
   try {
@@ -55,7 +85,7 @@ const createBook = async function (req, res) {
     if (!checkUerId) return res.status(404).send({ status: false, message: "User Id not found" });
     //-------------------------Authorisation------------------
     let token = req.userId
-    if (token != requestBody.userId) res.status(401).send({ status: false, message: "Unauthorised! User logged is not allowed" });
+    if (token != requestBody.userId) return res.status(401).send({ status: false, message: "Unauthorised! User logged is not allowed" });
 
     //------------------------check the ISBN-------------------------
     if (!isValid(ISBN)) { return res.status(400).send({ status: false, message: "ISBN Number is required" }) }
@@ -66,18 +96,24 @@ const createBook = async function (req, res) {
     if (isbnData) { return res.status(400).send({ status: false, message: "ISBN already exists" }) }
 
     //---------------------------check the category-------------------------
-    if (!category) { return res.status(400).send({ status: false, message: "category is required" }) }
+    if (!category) { return res.status(400).send({ status: false, message: "Category is required" }) }
     if (!isValid(category)) { return res.status(400).send({ status: false, message: "Please provide valid category" }) }
 
     //-----------------check the subcategory-----------------------
-    if (!subcategory) { return res.status(400).send({ status: false, message: "subcategory is required" }) }
+    if (!subcategory) { return res.status(400).send({ status: false, message: "Subcategory is required" }) }
     if (!isValid(subcategory)) { return res.status(400).send({ status: false, message: "Please provide valid subcategory" }) }
 
     //--------------------------check the relesedAt---------------------------------------
-    if (!isValid(releasedAt)) return res.status(400).send({ status: false, message: "relesedAt is require" })
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(releasedAt)) return res.status(400).send({ status: false, message: "please provied realesedAt in correect format" })
+    if (!isValid(releasedAt)) return res.status(400).send({ status: false, message: "RelesedAt is require" })
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(releasedAt)) return res.status(400).send({ status: false, message: "Please provied realesedAt in correect format" })
 
     //----------------------------send response----------------------------------------------
+    let files = req.files
+    if (files.length == 0) {
+      return res.status(400).send({ status: false, message: "no file found" })
+    }
+    let uploadedFileURL = await uploadFile(files[0])
+    requestBody.files = uploadedFileURL
     let savedData = await bookModel.create(requestBody)
     return res.status(201).send({ status: true, data: savedData })
   }
@@ -85,12 +121,13 @@ const createBook = async function (req, res) {
     res.status(500).send({ status: false, message: err.message })
   }
 }
+
 //===============================get books==================================================
 const getBooks = async function (req, res) {
   try {
     let doc = req.query
     if (!doc) {
-      let allBook = await bookModel.find({ isDeleted: false }).select({ _id: 1, title: 1, excerpt: 1, userId: 1, category: 1, releasedAt: 1, reviews: 1}).sort("title")
+      let allBook = await bookModel.find(doc).select({ _id: 1, title: 1, excerpt: 1, userId: 1, category: 1, releasedAt: 1, reviews: 1 }).sort("title")
       if (allBook.length == 0) return res.status(404).send({ status: false, message: "Book Not Found" })
       return res.status(200).send({ status: true, message: "Books List", data: allBook })
     }
@@ -115,7 +152,7 @@ const getBooks = async function (req, res) {
       if (!book) { return res.status(400).send({ status: false, message: "No book related to this sub-category" }) }
     }
 
-    let allBooks = await bookModel.find({isDeleted: false}).select({ _id: 1, title: 1, excerpt: 1, userId: 1, category: 1, releasedAt: 1, reviews: 1 }).sort("title")
+    let allBooks = await bookModel.find({ isDeleted: false }).select({ _id: 1, title: 1, excerpt: 1, userId: 1, category: 1, releasedAt: 1, reviews: 1 }).sort("title")
 
     if (allBooks.length == 0) return res.status(404).send({ status: false, message: "Book Not Found" })
     return res.status(200).send({ status: true, message: "Books List", data: allBooks })

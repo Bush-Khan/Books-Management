@@ -24,7 +24,6 @@ const createReview = async function (req, res) {
   //-------------------validate book id--------------------------------
   if (!isValidObjectId(Id)) {
     return res.status(400).send({ status: false, message: "Please provide valid bookId" })
-
   }
 
   //-----------------checkbookId present or not----------------
@@ -45,10 +44,10 @@ const createReview = async function (req, res) {
   if (!isValid(review)) return res.status(400).send({ message: "invalid review" })
 
   //------------------check reviewBy-------------------------------------
-  if (requestBody.reviewedBy === "") { requestBody.reviewedBy = "Guest" }
+  if (requestBody.reviewedBy === "") {return  requestBody.reviewedBy = "Guest" }
 
   //--------------------check rating----------------------------------
-  if (!isValid(rating)) res.status(400).send({ message: "review is required" })
+  if (!isValid(rating)) return res.status(400).send({ message: "review is required" })
   if (!(/^[1-5](\.[1-5][1-5]?)?$/).test(rating)) return res.status(400).send({ message: "please give valid rating" })
   //----------------------assigen date--------------------------------------
   requestBody.reviewedAt = new Date()

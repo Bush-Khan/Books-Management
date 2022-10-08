@@ -26,9 +26,6 @@ const createUser = async function (req, res) {
         if (!isValid(title)) { return res.status(400).send({ status: false, message: "Title is required" }) }
         if (!isValidTitle(title)) { return res.status(400).send({ msg: "Invalid format of title" }) }
 
-        let checkTitle = await userModel.findOne({ title })
-        if (!checkTitle) return res.status(400).send({ status: false, message: "Title is already use" })
-
         //----------------------validate the name------------------------------
         if (!isValid(name)) { return res.status(400).send({ status: false, message: "Name is required" }) }
         if (!/^[a-zA-Z_ ]{2,15}$/.test(name)) { return res.status(400).send({ message: "Invalid format of name" }) }
@@ -67,17 +64,17 @@ const createUser = async function (req, res) {
 const login=async function(req,res){
     try{
     let requestBody=req.body
-    if(!isvalidRequest(requestBody)) return res.status(400).send({msg:false,message:"please provied requestbody"})
+    if(!isvalidRequest(requestBody)) return res.status(400).send({msg:false,message:"Please provied requestbody"})
     let {email,password}=requestBody
     if (!isValid(email)) {return res.status(400).send({ status: false, message: "Email is required" })}
     if (!isValid(password))  return res.status(400).send({ status: false, message: "Password is required" })
     
     let user=await userModel.findOne({email:email,password:password})
-    if(!user) return res.status(400).send({status:false,message:"email & password is incorrect"})
+    if(!user) return res.status(400).send({status:false,message:"Email & Password is incorrect"})
     //---------creat jwt token-----------
-    let token=jwt.sign({email:user.email.toString(),userId:user._id.toString(),project:"Book Mangement",batch:"Radon"},
-    "Group77",
-    {expiresIn: "72h",})
+    let token=jwt.sign({email:user.email.toString(),userId:user._id.toString()},
+    "Hello",
+    {expiresIn: "72h"})
 
     res.setHeader("x-api-key",token)
     return res.status(201).send({status:true,token:token,message:"Login sucessfully"})

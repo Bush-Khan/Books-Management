@@ -7,7 +7,7 @@ const authenticate = async function (req, res, next) {
         if (!token) token = req.headers["x-api-key"];
         
         if (!token) return res.status(401).send({ status: false, message: "Token must be present", });
-        let decodedToken = jwt.verify(token, "Group77", (err, decoded)=>{
+        let decodedToken = jwt.verify(token, "Hello", (err, decoded)=>{
             if(err){
                return res.status(400).send({status: false , Error : err.message})
             }else{
